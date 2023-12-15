@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+
+  <body>
+    <h1>Live streaming</h1>
+    <div>
+        <img id="video-feed" src="{{ url_for('video') }}" width="50%"/>
+        <br>
+        <br>
+        <button id="startBtn" onclick="startVideo()">RUN</button>
+        <button id="stopBtn" onclick="stopVideo()">STOP</button>
+        <br>
+        <button onclick="loadResultPage()">Go to Result Page</button>
+    </div>
+    
+    <script>
+        var videoStarted = false;
+
+        function startVideo() {
+            document.getElementById("video-feed").src = "{{ url_for('video') }}";
+            videoStarted = true;
+        }
+
+        function loadResultPage(){
+            var newUrl = '/Pages/simple.html';
+
+            // Navigate to the new URL
+            window.location.href = newUrl;
+        }
+
+        function stopVideo() {
+            document.getElementById("video-feed").src = "";
+            videoStarted = false;
+        }
+
+        // Poll every 1 second to check if the video has stopped (optional)
+        setInterval(function() {
+            if (videoStarted && document.getElementById("video-feed").paused) {
+                // Video has stopped, update UI or perform additional actions
+                console.log("Video has stopped");
+                videoStarted = false;
+            }
+        }, 1000);
+    </script>
+    </body>
+</html>
