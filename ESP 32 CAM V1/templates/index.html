@@ -4,43 +4,48 @@
   <body>
     <h1>Live streaming</h1>
     <div>
-        <img id="video-feed" src="{{ url_for('video') }}" width="50%"/>
+        <img id="video-feed" src="{{ url_for('object_detection_video') }}" width="50%"/>
         <br>
         <br>
-        <button id="startBtn" onclick="startVideo()">RUN</button>
-        <button id="stopBtn" onclick="stopVideo()">STOP</button>
+        <button id="startObjectDetectionBtn" onclick="startObjectDetection()">Start Object Detection</button>
+        <button id="stopObjectDetectionBtn" onclick="stopObjectDetection()">Stop Object Detection</button>
+        <br>
+        <button id="startBaseCameraBtn" onclick="startBaseCamera()">Start Face Detection</button>
+        <button id="stopBaseCameraBtn" onclick="stopBaseCamera()">Stop Face Detection</button>
         <br>
         <button onclick="loadResultPage()">Go to Result Page</button>
     </div>
     
     <script>
-        var videoStarted = false;
+        var objectDetectionStarted = false;
+        var baseCameraStarted = false;
 
-        function startVideo() {
-            document.getElementById("video-feed").src = "{{ url_for('video') }}";
-            videoStarted = true;
+        function startObjectDetection() {
+            document.getElementById("video-feed").src = "{{ url_for('object_detection_video') }}";
+            objectDetectionStarted = true;
+        }
+
+        function startBaseCamera() {
+            document.getElementById("video-feed").src = "{{ url_for('face_detection_video') }}";
+            baseCameraStarted = true;
+        }
+
+        function stopObjectDetection() {
+            document.getElementById("video-feed").src = "";
+            objectDetectionStarted = false;
+        }
+
+        function stopBaseCamera() {
+            document.getElementById("video-feed").src = "";
+            baseCameraStarted = false;
         }
 
         function loadResultPage(){
-            var newUrl = '/Pages/simple.html';
+            var newUrl = '/testface';
 
             // Navigate to the new URL
             window.location.href = newUrl;
         }
-
-        function stopVideo() {
-            document.getElementById("video-feed").src = "";
-            videoStarted = false;
-        }
-
-        // Poll every 1 second to check if the video has stopped (optional)
-        setInterval(function() {
-            if (videoStarted && document.getElementById("video-feed").paused) {
-                // Video has stopped, update UI or perform additional actions
-                console.log("Video has stopped");
-                videoStarted = false;
-            }
-        }, 1000);
     </script>
     </body>
 </html>
