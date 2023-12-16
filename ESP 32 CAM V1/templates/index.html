@@ -2,7 +2,7 @@
 <html>
 
   <body>
-    <h1>Live streaming</h1>
+    <h1>Clap Vision</h1>
     <div>
         <img id="video-feed" src="{{ url_for('object_detection_video') }}" width="50%"/>
         <br>
@@ -13,12 +13,14 @@
         <button id="startBaseCameraBtn" onclick="startBaseCamera()">Start Face Detection</button>
         <button id="stopBaseCameraBtn" onclick="stopBaseCamera()">Stop Face Detection</button>
         <br>
-        <button onclick="loadResultPage()">Go to Result Page</button>
+        <button id="startFaceRecog" onclick="startFaceRecog()">Run Currency Detection</button>
+        <button id="stopFaceRecog" onclick="stopFaceRecog()">Stop Currency Detection</button>
     </div>
     
     <script>
         var objectDetectionStarted = false;
         var baseCameraStarted = false;
+        var FacRecogStarted = false;
 
         function startObjectDetection() {
             document.getElementById("video-feed").src = "{{ url_for('object_detection_video') }}";
@@ -28,6 +30,15 @@
         function startBaseCamera() {
             document.getElementById("video-feed").src = "{{ url_for('face_detection_video') }}";
             baseCameraStarted = true;
+        }
+        function startFaceRecog() {
+            document.getElementById("video-feed").src = "{{ url_for('face_recognition_video') }}";
+            FacRecogStarted = true;
+        }
+
+        function stopFaceRecog(){
+            document.getElementById("video-feed").src = "";
+            FacRecogStarted = false;
         }
 
         function stopObjectDetection() {
