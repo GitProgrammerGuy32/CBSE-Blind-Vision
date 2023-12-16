@@ -21,7 +21,7 @@ net.setInputScale(1.0 / 127.5)
 net.setInputMean((127.5, 127.5, 127.5))
 net.setInputSwapRB(True)
 
-# Face detection setup
+# Face detection setup (same as before)
 face_model_path = 'Weights/facev3.tflite'
 face_label_path = 'Weights/face.txt'
 face_min_confidence = 0.7
@@ -38,7 +38,24 @@ face_input_mean, face_input_std = 127.5, 127.5
 with open(face_label_path, 'r') as f:
     face_labels = [line.strip() for line in f.readlines()]
 
-# Common camera URL for both object detection and face detection
+# Face recognition setup
+face_recognition_model_path = 'Weights/money.tflite'
+face_recognition_label_path = 'Weights/money.txt'
+face_recognition_min_confidence = 0.7
+
+face_recognition_interpreter = Interpreter(model_path=face_recognition_model_path)
+face_recognition_interpreter.allocate_tensors()
+face_recognition_input_details = face_recognition_interpreter.get_input_details()
+face_recognition_output_details = face_recognition_interpreter.get_output_details()
+face_recognition_height, face_recognition_width = face_recognition_input_details[0]['shape'][1], face_recognition_input_details[0]['shape'][2]
+
+face_recognition_float_input = (face_recognition_input_details[0]['dtype'] == np.float32)
+face_recognition_input_mean, face_recognition_input_std = 127.5, 127.5
+
+with open(face_recognition_label_path, 'r') as f:
+    face_recognition_labels = [line.strip() for line in f.readlines()]
+
+# Common camera URL for all three features
 camera_url = 'http://192.168.1.8/cam-hi.jpg'  # Update with your camera URL
 
 def generate(url, detection_type):
@@ -51,6 +68,8 @@ def generate(url, detection_type):
             result, _ = getObjects(frame, 0.60, 0.2)
         elif detection_type == 'face':
             result = detectFaces(frame)
+        elif detection_type == 'face_recognition':
+            result = recognizeFaces(frame)
 
         _, jpeg = cv2.imencode('.jpg', result)
         frame = jpeg.tobytes()
@@ -114,6 +133,45 @@ def detectFaces(frame):
 
     return frame
 
+
+def recognizeFaces(frame):
+    image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    imH, imW, _ = frame.shape
+    image_resized = cv2.resize(image_rgb, (face_recognition_width, face_recognition_height))
+    input_data = np.expand_dims(image_resized, axis=0)
+
+    # Normalize pixel values if using a floating model
+    if face_recognition_float_input:
+        input_data = (np.float32(input_data) - face_recognition_input_mean) / face_recognition_input_std
+
+    face_recognition_interpreter.set_tensor(face_recognition_input_details[0]['index'], input_data)
+    face_recognition_interpreter.invoke()
+
+    boxes = face_recognition_interpreter.get_tensor(face_recognition_output_details[1]['index'])[0]
+    classes = face_recognition_interpreter.get_tensor(face_recognition_output_details[3]['index'])[0]
+    scores = face_recognition_interpreter.get_tensor(face_recognition_output_details[0]['index'])[0]
+
+    for i in range(len(scores)):
+        if face_recognition_min_confidence < scores[i] <= 1.0:
+            ymin = int(max(1, (boxes[i][0] * imH)))
+            xmin = int(max(1, (boxes[i][1] * imW)))
+            ymax = int(min(imH, (boxes[i][2] * imH)))
+            xmax = int(min(imW, (boxes[i][3] * imW)))
+
+            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (10, 255, 0), 2)
+
+            object_name = face_recognition_labels[int(classes[i])]
+            label = f'{object_name}: {int(scores[i] * 100)}%'
+
+            labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+            label_ymin = max(ymin, labelSize[1] + 10)
+
+            cv2.rectangle(frame, (xmin, label_ymin - labelSize[1] - 10),
+                          (xmin + labelSize[0], label_ymin + baseLine - 10), (255, 255, 255), cv2.FILLED)
+            cv2.putText(frame, label, (xmin, label_ymin - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+
+    return frame
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -125,6 +183,10 @@ def object_detection_video():
 @app.route('/face_detection_video')
 def face_detection_video():
     return Response(generate(camera_url, 'face'), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/face_recognition_video')
+def face_recognition_video():
+    return Response(generate(camera_url, 'face_recognition'), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/testface')
 def sample():
