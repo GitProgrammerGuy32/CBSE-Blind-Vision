@@ -1,54 +1,65 @@
 <!DOCTYPE html>
 <html>
-
+    <link rel="stylesheet" href="D:\DesktopFolder\ESP32 Cam Host\styles\index.css">
   <body>
     <h1>Clap Vision</h1>
     <div>
         <img id="video-feed" src="{{ url_for('object_detection_video') }}" width="50%"/>
         <br>
         <br>
-        <button id="startObjectDetectionBtn" onclick="startObjectDetection()">Start Object Detection</button>
-        <button id="stopObjectDetectionBtn" onclick="stopObjectDetection()">Stop Object Detection</button>
-        <br>
-        <button id="startBaseCameraBtn" onclick="startBaseCamera()">Start Face Detection</button>
-        <button id="stopBaseCameraBtn" onclick="stopBaseCamera()">Stop Face Detection</button>
-        <br>
-        <button id="startFaceRecog" onclick="startFaceRecog()">Run Currency Detection</button>
-        <button id="stopFaceRecog" onclick="stopFaceRecog()">Stop Currency Detection</button>
+        <button id="startObjectDetectionBtn" onclick="toggleObjectDetection()">Start Object Detection</button>
+        <button id="startBaseCameraBtn" onclick="toggleBaseCamera()">Start Face Detection</button>
+        <button id="startFaceRecog" onclick="toggleFaceRecog()">Run Currency Detection</button>
     </div>
     
     <script>
         var objectDetectionStarted = false;
         var baseCameraStarted = false;
-        var FacRecogStarted = false;
+        var faceRecogStarted = false;
 
-        function startObjectDetection() {
-            document.getElementById("video-feed").src = "{{ url_for('object_detection_video') }}";
-            objectDetectionStarted = true;
+        function toggleObjectDetection() {
+            var btn = document.getElementById("startObjectDetectionBtn");
+            if (objectDetectionStarted) {
+                // If object detection is started, stop it
+                document.getElementById("video-feed").src = "";
+                objectDetectionStarted = false;
+                btn.innerText = "Start Object Detection";
+            } else {
+                // If object detection is stopped, start it
+                document.getElementById("video-feed").src = "{{ url_for('object_detection_video') }}";
+                objectDetectionStarted = true;
+                btn.innerText = "Stop Object Detection";
+            }
         }
 
-        function startBaseCamera() {
-            document.getElementById("video-feed").src = "{{ url_for('face_detection_video') }}";
-            baseCameraStarted = true;
-        }
-        function startFaceRecog() {
-            document.getElementById("video-feed").src = "{{ url_for('face_recognition_video') }}";
-            FacRecogStarted = true;
-        }
-
-        function stopFaceRecog(){
-            document.getElementById("video-feed").src = "";
-            FacRecogStarted = false;
-        }
-
-        function stopObjectDetection() {
-            document.getElementById("video-feed").src = "";
-            objectDetectionStarted = false;
+        function toggleBaseCamera() {
+            var btn = document.getElementById("startBaseCameraBtn");
+            if (baseCameraStarted) {
+                // If face detection is started, stop it
+                document.getElementById("video-feed").src = "";
+                baseCameraStarted = false;
+                btn.innerText = "Start Face Detection";
+            } else {
+                // If face detection is stopped, start it
+                document.getElementById("video-feed").src = "{{ url_for('face_detection_video') }}";
+                baseCameraStarted = true;
+                btn.innerText = "Stop Face Detection";
+            }
         }
 
-        function stopBaseCamera() {
-            document.getElementById("video-feed").src = "";
-            baseCameraStarted = false;
+        function toggleFaceRecog() {
+            var btn = document.getElementById("startFaceRecog");
+            if (faceRecogStarted) {
+                // If currency detection is started, stop it
+                document.getElementById("video-feed").src = "";
+                faceRecogStarted = false;
+                btn.innerText = "Run Currency Detection";
+            } else {
+                // If currency detection is stopped, start it
+                document.getElementById("video-feed").src = "{{ url_for('face_recognition_video') }}";
+                faceRecogStarted = true;
+                btn.innerText = "Stop Currency Detection";
+            }
         }
 
         function loadResultPage(){
