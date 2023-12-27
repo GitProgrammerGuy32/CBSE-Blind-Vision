@@ -1,3 +1,5 @@
+###pip install google-generativeai#####
+
 import google.generativeai as genai
 from pathlib import Path
 import pyttsx3
