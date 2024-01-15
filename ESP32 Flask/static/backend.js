@@ -16,22 +16,26 @@ function toggleObjectDetection() {
         btn.innerText = "Start Object Detection";
         speak("Object detection stopped");
         fetch('/get_objvar')
-                .then(response => response.json())
-                .then(data => {
-                    const outputElement = document.getElementById('output');
-                    outputElement.innerText = data.variable;
-                    
-                    // Speak out the variable
-                    speak(data.variable);
-                });
+            .then(response => response.json())
+            .then(data => {
+                const outputElement = document.getElementById('output');
+
+                // Check if the data variable is not an empty array before using it
+                if (data.variable && data.variable.length > 0) {
+                    outputElement.innerText = data.variable.join(', ');  // Join the array elements into a string
+                    speak(data.variable.join(', ') + " detected");  // Speak out the variable
+                } else {
+                    outputElement.innerText = "No objects detected";
+                }
+            });
     } else {
         document.getElementById("video-feed").src = "/object_detection_video";  // Update the URL
         objectDetectionStarted = true;
         btn.innerText = "Stop Object Detection";
         speak("Object detection running");
     }
-
 }
+
 
 function toggleBaseCamera() {
     var btn = document.getElementById("startBaseCameraBtn");
@@ -47,7 +51,7 @@ function toggleBaseCamera() {
                     outputElement.innerText = data.variable;
                     
                     // Speak out the variable
-                    speak(data.variable);
+                    speak(data.variable+"detected");
                 });
     } else {
         document.getElementById("video-feed").src = "/face_detection_video";  // Update the URL
@@ -72,7 +76,7 @@ function toggleFaceRecog() {
                     outputElement.innerText = data.variable;
                     
                     // Speak out the variable
-                    speak(data.variable);
+                    speak(data.variable+"detected");
                 });
     } else {
         document.getElementById("video-feed").src = "/face_recognition_video";  // Update the URL
