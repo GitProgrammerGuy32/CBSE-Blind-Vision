@@ -11,6 +11,8 @@ classNames = []
 speak = False
 speakface=False
 speakmoney = False
+max_objects_to_detect = 3
+detected_objects = 0
 classFile = "Weights/coco.names"
 with open(classFile, "rt") as f:
     classNames = f.read().rstrip("\n").split("\n")
@@ -64,7 +66,7 @@ with open(face_recognition_label_path, 'r') as f:
     face_recognition_labels = [line.strip() for line in f.readlines()]
 
 # Common camera URL for all three features
-camera_url = 'http://192.168.1.11/cam-hi.jpg'  # Update with your camera URL
+camera_url = 'http://192.168.1.4/cam-hi.jpg'  # Update with your camera URL
 
 def generate(url, detection_type):
     while True:
@@ -85,24 +87,36 @@ def generate(url, detection_type):
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
 def getObjects(img, thres, nms, draw=True, objects=[]):
-    global speak, detected_classes
+    global speak, detected_classes, detected_objects
     classIds, confs, bbox = net.detect(img, confThreshold=thres, nmsThreshold=nms)
+    
     if len(objects) == 0:
         objects = classNames
+    
     objectInfo = []
-    if len(classIds) != 0:
+    
+    if len(classIds) != 0 and detected_objects < max_objects_to_detect:
         for classId, confidence, box in zip(classIds.flatten(), confs.flatten(), bbox):
             className = classNames[classId - 1]
+            
             if className in objects and className not in detected_classes:
                 objectInfo.append([box, className])
+                
                 if draw:
                     cv2.rectangle(img, box, color=(0, 255, 0), thickness=2)
                     cv2.putText(img, classNames[classId - 1].upper(), (box[0] + 10, box[1] + 30),
                                 cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
                     cv2.putText(img, str(round(confidence * 100, 2)), (box[0] + 200, box[1] + 30),
                                 cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+                
                 speak = True
                 detected_classes.add(className)
+                detected_objects += 1
+
+        # If the maximum number of objects has been detected, reset the counter and set speak to False
+        if detected_objects >= max_objects_to_detect:
+            detected_objects = 0
+            speak = False
 
     return img, objectInfo
 
@@ -203,16 +217,15 @@ def object_detection_video():
 def face_detection_video():
     return Response(generate(camera_url, 'face'), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+MAX_DETECTED_CLASSES = 3
 @app.route('/get_objvar')
 def speakobj():
-    global speak, detected_classes
+    global detected_classes
     variable_to_send = list(detected_classes)
+    # Limit the number of detected classes
+    variable_to_send = variable_to_send[:MAX_DETECTED_CLASSES]
     detected_classes = set()  # Clear the set after sending the classes
-    var2 = []
-    if speak:
-        return jsonify({'variable': variable_to_send})
-    elif not speak:
-        return jsonify({'variable': var2})
+    return jsonify({'variable': variable_to_send})
 
 @app.route('/get_facevar')
 def speakface():
