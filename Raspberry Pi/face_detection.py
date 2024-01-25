@@ -33,9 +33,6 @@ button_pin = 4  # Replace with the GPIO pin connected to your button
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-# Initialize the dictionary to track the counts for each class
-class_counts = {}
-
 while True:
     ret, frame = cap.read()
     image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -55,36 +52,15 @@ while True:
     classes = interpreter.get_tensor(output_details[3]['index'])[0]
     scores = interpreter.get_tensor(output_details[0]['index'])[0]
 
-    detections = []
+    # Check if the button is pressed
+    if GPIO.input(button_pin) == GPIO.LOW:
+        for i in range(len(scores)):
+            if min_conf <= scores[i] <= 1.0:
+                object_name = labels[int(classes[i])]
 
-    for i in range(len(scores)):
-        if min_conf <= scores[i] <= 1.0:
-            ymin = int(max(1, (boxes[i][0] * imH)))
-            xmin = int(max(1, (boxes[i][1] * imW)))
-            ymax = int(min(imH, (boxes[i][2] * imH)))
-            xmax = int(min(imW, (boxes[i][3] * imW)))
-
-            object_name = labels[int(classes[i])]
-            label = '%s: %d%%' % (object_name, int(scores[i] * 100))
-
-            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (10, 255, 0), 2)
-            labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
-            label_ymin = max(ymin, labelSize[1] + 10)
-            cv2.rectangle(frame, (xmin, label_ymin - labelSize[1] - 10),
-                          (xmin + labelSize[0], label_ymin + baseLine - 10), (255, 255, 255), cv2.FILLED)
-            cv2.putText(frame, label, (xmin, label_ymin - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
-
-            detections.append([object_name, scores[i], xmin, ymin, xmax, ymax])
-
-            # Check if the class has been spoken and the button is pressed
-            if object_name in class_counts and class_counts[object_name] < 2 and GPIO.input(button_pin) == GPIO.LOW:
                 # Speak out the detected object name
                 engine.say(f"{object_name} detected")
                 engine.runAndWait()
-                # Increment the count for the class
-                class_counts[object_name] += 1
-            elif object_name not in class_counts:
-                class_counts[object_name] = 1
 
     cv2.imshow('output', frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
