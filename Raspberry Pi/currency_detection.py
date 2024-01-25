@@ -4,7 +4,7 @@ from tensorflow.lite.python.interpreter import Interpreter
 import pyttsx3
 import RPi.GPIO as GPIO
 
-modelpath = 'Weights/detect.tflite'
+modelpath = 'Weights/money.tflite'
 lblpath = 'Weights/money.txt'
 min_conf = 0.75
 cap = cv2.VideoCapture(0)
