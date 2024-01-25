@@ -6,9 +6,10 @@ import time
 
 # Dictionary to map GPIO pin numbers to script names button PINS
 script_mapping = {
-    3: '/home/pi/Desktop/Blind-Vision-Progress-Repo/facetflite_forpi_main.py',
-    4: '/home/pi/Desktop/Blind-Vision-Progress-Repo/currencytflite_forpi.py',
-    17: 'detect.py',
+    3: 'face_detection.py',
+    4: 'currency_detection.py',
+    17: 'object_detection.py',
+    27: 'image_captioning.py'
 }
 
 # Dictionary to track the state of each script
