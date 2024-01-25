@@ -1,27 +1,23 @@
-###pip install google-generativeai#####
-
 import cv2
 import google.generativeai as genai
 from pathlib import Path
-import pyttsx3
 import threading
 import os
+import atexit
+import pyttsx3
 
-def say(text):
-    engine = pyttsx3.init()
-    engine.setProperty('sapi', 10)
-    engine.say(text)
-    engine.runAndWait()
-
+engine = pyttsx3.init()
 # Initialize webcam
 cap = cv2.VideoCapture(0)
+cap.set(3, 640)
+cap.set(4, 640)
 genai.configure(api_key='AIzaSyB-IbJ3LvK2x10tWXxcDcQv_2CRoYBLPQI')
 
 # Initialize counter
 counter = 0
 
 generation_config = {
-    "temperature": 0.5,
+    "temperature": 0.7	,
     "top_p": 1,
     "top_k": 32,
     "max_output_tokens": 4096,
@@ -67,6 +63,8 @@ def input_image_setup(file_loc):
 def generate_gemini_response_async(input_prompt, image_loc, question_prompt):
     response = generate_gemini_response(input_prompt, image_loc, question_prompt)
     print(response)
+    engine.say(response)
+    engine.runAndWait()
 
 
 def generate_gemini_response(input_prompt, image_loc, question_prompt):
@@ -90,8 +88,28 @@ input_prompt = """"
                """
 
 # Register an exit handler to delete the saved images before exiting
-import atexit
 atexit.register(delete_saved_images)
+
+def delete_images_in_folder(folder_path):
+    try:
+        # List all files in the folder
+        files = os.listdir(folder_path)
+
+        # Filter only image files (you can modify the condition as needed)
+        image_files = [f for f in files if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+
+        # Delete each image file
+        for image_file in image_files:
+            file_path = os.path.join(folder_path, image_file)
+            os.remove(file_path)
+            print(f"Deleted: {file_path}")
+
+        print("All images deleted successfully.")
+    except Exception as e:
+        print(f"Error deleting images: {e}")
+
+# Replace 'your_folder_path' with the actual path of the folder containing images
+folder_path = 'Videos'
 
 while True:
     # Capture frame-by-frame
@@ -106,7 +124,7 @@ while True:
         # Increment counter
         counter += 1
 
-        # Save the image with counter appended to the filename
+        # Save the image with counter appended to the filename in the Videos folder
         filename = f'Videos/image_{counter}.png'
         cv2.imwrite(filename, frame)
         image_loc = f"Videos/image_{counter}.png"
@@ -119,6 +137,7 @@ while True:
 
     # Check for the 'q' key press to exit the loop
     elif key == ord('q'):
+        delete_images_in_folder(folder_path)
         break
 
 # Release the webcam and close all windows
