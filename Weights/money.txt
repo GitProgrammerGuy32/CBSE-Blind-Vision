@@ -1,6 +1,1 @@
-10 rupees
-100 rupees
-20 rupees
-200 rupees
-500 rupees
-50 rupees
+
