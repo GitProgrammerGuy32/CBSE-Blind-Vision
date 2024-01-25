@@ -48,15 +48,24 @@ while True:
     interpreter.set_tensor(input_details[0]['index'], input_data)
     interpreter.invoke()
 
-    boxes = interpreter.get_tensor(output_details[1]['index'])[0]
-    classes = interpreter.get_tensor(output_details[3]['index'])[0]
-    scores = interpreter.get_tensor(output_details[0]['index'])[0]
+    boxes = interpreter.get_tensor(output_details[0]['index'])[0]
+    classes = interpreter.get_tensor(output_details[1]['index'])[0]
+    scores = interpreter.get_tensor(output_details[2]['index'])[0]
 
     # Check if the button is pressed
     if GPIO.input(button_pin) == GPIO.LOW:
         for i in range(len(scores)):
             if min_conf <= scores[i] <= 1.0:
+                ymin, xmin, ymax, xmax = boxes[i]
+                xmin = int(xmin * imW)
+                xmax = int(xmax * imW)
+                ymin = int(ymin * imH)
+                ymax = int(ymax * imH)
+
                 object_name = labels[int(classes[i])]
+
+                # Draw bounding box
+                cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (10, 255, 0), 2)
 
                 # Speak out the detected object name
                 engine.say(f"{object_name} detected")
