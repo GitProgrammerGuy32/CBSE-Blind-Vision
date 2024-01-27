@@ -1,5 +1,5 @@
 import cv2
-import google.generativeai as genai
+from google.generativeai import genai
 from pathlib import Path
 import threading
 import os
@@ -9,8 +9,7 @@ import RPi.GPIO as GPIO
 from googletrans import Translator
 
 engine = pyttsx3.init()
-global language
-language = "en"
+
 # Initialize webcam
 cap = cv2.VideoCapture(0)
 cap.set(3, 640)
@@ -52,7 +51,6 @@ model = genai.GenerativeModel(model_name="gemini-pro-vision",
                               generation_config=generation_config,
                               safety_settings=safety_settings)
 
-
 def input_image_setup(file_loc):
     if not (img := Path(file_loc)).exists():
         raise FileNotFoundError(f"Could not find image: {img}")
@@ -65,16 +63,20 @@ def input_image_setup(file_loc):
     ]
     return image_parts
 
-
 def generate_gemini_response_async(input_prompt, image_loc, question_prompt):
     response = generate_gemini_response(input_prompt, image_loc, question_prompt)
+    global language
     translator = Translator()
     response_temp = response
-    out = translator.translate(response_temp,dest=language).text
-    print(response)
-    engine.say(response)
-    engine.runAndWait()
-
+    if language == "en":
+        print(response)
+        engine.say(response)
+        engine.runAndWait()
+    else:
+        out = translator.translate(response_temp, dest=language).text
+        print(out)
+        engine.say(out)
+        engine.runAndWait()
 
 def generate_gemini_response(input_prompt, image_loc, question_prompt):
     image_prompt = input_image_setup(image_loc)
@@ -82,19 +84,11 @@ def generate_gemini_response(input_prompt, image_loc, question_prompt):
     response = model.generate_content(prompt_parts)
     return response.text
 
-
 def delete_saved_images():
     for i in range(1, counter + 1):
         filename = f'Videos/image_{i}.png'
         if os.path.exists(filename):
             os.remove(filename)
-
-
-input_prompt = """"
-               You are an expert in understanding scenarios and reading texts and identifying objects.
-               You will receive input images as scenarios &
-               you will have to describe scenarios and identify objects and read texts based on the input image
-               """
 
 # Register an exit handler to delete the saved images before exiting
 atexit.register(delete_saved_images)
@@ -124,6 +118,14 @@ GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 button_pin2 = 18  # Replace with the GPIO pin connected to your button
 GPIO.setup(button_pin2, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+button_pin3 = 3  # Replace with the GPIO pin connected to your button
+GPIO.setup(button_pin3, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+# Language selection
+global language
+language = "en"  # Default language is English
+
 # Replace 'your_folder_path' with the actual path of the folder containing images
 folder_path = 'Videos'
 
@@ -132,15 +134,18 @@ while True:
     ret, frame = cap.read()
     # Display the resulting frame
     cv2.imshow('Webcam Feed', frame)
-    # Check for GPIO pin press
-    if GPIO.input(button_pin2) == GPIO.LOW:
+
+    # Check for GPIO pin press to toggle language
+    if GPIO.input(button_pin3) == GPIO.LOW:
         if language == "en":
             language = "hi"
             print("Language selected: Hindi")
         else:
             language = "en"
             print("Language selected: English")
-    if GPIO.input(button_pin) == GPIO.LOW and not image_captured:
+
+    # Check for GPIO pin press to capture image
+    if GPIO.input(button_pin) == GPIO.LLOW and not image_captured:
         # Increment counter
         counter += 1
 
@@ -148,13 +153,12 @@ while True:
         filename = f'Videos/image_{counter}.png'
         cv2.imwrite(filename, frame)
         image_loc = f"Videos/image_{counter}.png"
-        question_prompt = "What is this image? describe precisely"
+        question_prompt = "What is this image? Describe precisely"
 
         # Use a separate thread to generate Gemini response asynchronously
         threading.Thread(target=generate_gemini_response_async, args=(input_prompt, image_loc, question_prompt)).start()
 
         print(f"Image {counter} saved as {filename}")
-        
         image_captured = True  # Set the flag to True
 
     # Reset the flag if the button is released
