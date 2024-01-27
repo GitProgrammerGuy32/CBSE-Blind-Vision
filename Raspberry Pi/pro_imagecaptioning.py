@@ -6,6 +6,8 @@ import os
 import atexit
 import pyttsx3
 import RPi.GPIO as GPIO
+from googletrans import Translator
+
 
 engine = pyttsx3.init()
 
@@ -21,7 +23,7 @@ counter = 0
 image_captured = False  # Flag to track whether an image has been captured
 
 generation_config = {
-    "temperature": 0.7,
+    "temperature": 0.5,
     "top_p": 1,
     "top_k": 32,
     "max_output_tokens": 4096,
@@ -66,6 +68,9 @@ def input_image_setup(file_loc):
 
 def generate_gemini_response_async(input_prompt, image_loc, question_prompt):
     response = generate_gemini_response(input_prompt, image_loc, question_prompt)
+    translator = Translator()
+    response_temp = response
+    out = translator.translate(response_temp,dest="hi").text
     print(response)
     engine.say(response)
     engine.runAndWait()
@@ -113,10 +118,12 @@ def delete_images_in_folder(folder_path):
         print(f"Error deleting images: {e}")
 
 # GPIO setup
-button_pin = 3  # Replace with the GPIO pin connected to your button
+button_pin = 14  # Replace with the GPIO pin connected to your button
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
+button_pin2 = 18  # Replace with the GPIO pin connected to your button
+GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 # Replace 'your_folder_path' with the actual path of the folder containing images
 folder_path = 'Videos'
 
@@ -150,8 +157,7 @@ while True:
         image_captured = False
 
     # Check for the 'q' key press to exit the loop
-    key = cv2.waitKey(1) & 0xFF
-    if key == ord('q'):
+    if GPIO.input(button_pin2) == GPIO.LOW:
         delete_images_in_folder(folder_path)
         break
 
