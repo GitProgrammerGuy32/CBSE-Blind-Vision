@@ -66,8 +66,8 @@ def input_image_setup(file_loc):
     return image_parts
 
 
-def generate_gemini_response_async(input_prompt, image_loc, question_prompt, language):
-    response = generate_gemini_response(input_prompt, image_loc, question_prompt, language)
+def generate_gemini_response_async(input_prompt, image_loc, question_prompt):
+    response = generate_gemini_response(input_prompt, image_loc, question_prompt)
     translator = Translator()
     response_temp = response
     out = translator.translate(response_temp,dest=language).text
@@ -76,7 +76,7 @@ def generate_gemini_response_async(input_prompt, image_loc, question_prompt, lan
     engine.runAndWait()
 
 
-def generate_gemini_response(input_prompt, image_loc, question_prompt, language):
+def generate_gemini_response(input_prompt, image_loc, question_prompt):
     image_prompt = input_image_setup(image_loc)
     prompt_parts = [input_prompt, image_prompt[0], question_prompt]
     response = model.generate_content(prompt_parts)
@@ -132,10 +132,14 @@ while True:
     ret, frame = cap.read()
     # Display the resulting frame
     cv2.imshow('Webcam Feed', frame)
-    if GPIO.input(button_pin2) == GPIO.LOW:
-        language = "hi"
-        print("langauge selected hindi")
     # Check for GPIO pin press
+    if GPIO.input(button_pin2) == GPIO.LOW:
+        if language == "en":
+            language = "hi"
+            print("Language selected: Hindi")
+        else:
+            language = "en"
+            print("Language selected: English")
     if GPIO.input(button_pin) == GPIO.LOW and not image_captured:
         # Increment counter
         counter += 1
@@ -147,7 +151,7 @@ while True:
         question_prompt = "What is this image? describe precisely"
 
         # Use a separate thread to generate Gemini response asynchronously
-        threading.Thread(target=generate_gemini_response_async, args=(input_prompt, image_loc, question_prompt, language)).start()
+        threading.Thread(target=generate_gemini_response_async, args=(input_prompt, image_loc, question_prompt)).start()
 
         print(f"Image {counter} saved as {filename}")
         
