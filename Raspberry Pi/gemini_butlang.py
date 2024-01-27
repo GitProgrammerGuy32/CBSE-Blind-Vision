@@ -8,10 +8,9 @@ import pyttsx3
 import RPi.GPIO as GPIO
 from googletrans import Translator
 
-
 engine = pyttsx3.init()
-translator = Translator()
-
+global language
+language = "en"
 # Initialize webcam
 cap = cv2.VideoCapture(0)
 cap.set(3, 640)
@@ -23,7 +22,36 @@ genai.configure(api_key='AIzaSyB-IbJ3LvK2x10tWXxcDcQv_2CRoYBLPQI')
 counter = 0
 image_captured = False  # Flag to track whether an image has been captured
 
-language = 'en'  # Default language is English
+generation_config = {
+    "temperature": 0.7,
+    "top_p": 1,
+    "top_k": 32,
+    "max_output_tokens": 4096,
+}
+
+safety_settings = [
+    {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    },
+    {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    },
+    {
+        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    },
+    {
+        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    }
+]
+
+model = genai.GenerativeModel(model_name="gemini-pro-vision",
+                              generation_config=generation_config,
+                              safety_settings=safety_settings)
+
 
 def input_image_setup(file_loc):
     if not (img := Path(file_loc)).exists():
@@ -41,9 +69,11 @@ def input_image_setup(file_loc):
 def generate_gemini_response_async(input_prompt, image_loc, question_prompt):
     global language
     response = generate_gemini_response(input_prompt, image_loc, question_prompt)
-    translated_response = translator.translate(response, dest=language).text
+    translator = Translator()
+    response_temp = response
+    out = translator.translate(response_temp,dest=language).text
     print(response)
-    engine.say(translated_response)
+    engine.say(response)
     engine.runAndWait()
 
 
@@ -90,56 +120,47 @@ def delete_images_in_folder(folder_path):
 
 # GPIO setup
 button_pin = 14  # Replace with the GPIO pin connected to your button
-button_pin2 = 18  # Replace with the GPIO pin connected to your button
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(button_pin2, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
+button_pin2 = 18  # Replace with the GPIO pin connected to your button
+GPIO.setup(button_pin2, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 # Replace 'your_folder_path' with the actual path of the folder containing images
 folder_path = 'Videos'
-
-language_selected = False
 
 while True:
     # Capture frame-by-frame
     ret, frame = cap.read()
-
     # Display the resulting frame
     cv2.imshow('Webcam Feed', frame)
-
+    if GPIO.input(button_pin2) == GPIO.LOW:
+        language = "hi"
+        print("langauge selected hindi")
     # Check for GPIO pin press
-    if not language_selected:
-        if GPIO.input(button_pin2) == GPIO.LOW:
-            language = 'hi'
-            language_selected = True
-        elif GPIO.input(button_pin) == GPIO.LOW:
-            language = 'en'
-            language_selected = True
+    if GPIO.input(button_pin) == GPIO.LOW and not image_captured:
+        # Increment counter
+        counter += 1
 
-    if not image_captured and language_selected:
-        if GPIO.input(button_pin) == GPIO.LOW:
-            # Increment counter
-            counter += 1
+        # Save the image with counter appended to the filename in the Videos folder
+        filename = f'Videos/image_{counter}.png'
+        cv2.imwrite(filename, frame)
+        image_loc = f"Videos/image_{counter}.png"
+        question_prompt = "What is this image? describe precisely"
 
-            # Save the image with counter appended to the filename in the Videos folder
-            filename = f'Videos/image_{counter}.png'
-            cv2.imwrite(filename, frame)
-            image_loc = f"Videos/image_{counter}.png"
-            question_prompt = "What is this image? Describe precisely."
+        # Use a separate thread to generate Gemini response asynchronously
+        threading.Thread(target=generate_gemini_response_async, args=(input_prompt, image_loc, question_prompt)).start()
 
-            # Use a separate thread to generate Gemini response asynchronously
-            threading.Thread(target=generate_gemini_response_async, args=(input_prompt, image_loc, question_prompt)).start()
-
-            print(f"Image {counter} saved as {filename}")
-
-            image_captured = True  # Set the flag to True
+        print(f"Image {counter} saved as {filename}")
+        
+        image_captured = True  # Set the flag to True
 
     # Reset the flag if the button is released
     if GPIO.input(button_pin) == GPIO.HIGH:
         image_captured = False
 
     # Check for the 'q' key press to exit the loop
-    if cv2.waitKey(1) == ord('q'):
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('q'):
         delete_images_in_folder(folder_path)
         break
 
