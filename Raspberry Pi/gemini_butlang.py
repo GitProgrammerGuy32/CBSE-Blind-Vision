@@ -66,9 +66,8 @@ def input_image_setup(file_loc):
     return image_parts
 
 
-def generate_gemini_response_async(input_prompt, image_loc, question_prompt):
-    global language
-    response = generate_gemini_response(input_prompt, image_loc, question_prompt)
+def generate_gemini_response_async(input_prompt, image_loc, question_prompt, language):
+    response = generate_gemini_response(input_prompt, image_loc, question_prompt, language)
     translator = Translator()
     response_temp = response
     out = translator.translate(response_temp,dest=language).text
@@ -77,7 +76,7 @@ def generate_gemini_response_async(input_prompt, image_loc, question_prompt):
     engine.runAndWait()
 
 
-def generate_gemini_response(input_prompt, image_loc, question_prompt):
+def generate_gemini_response(input_prompt, image_loc, question_prompt, language):
     image_prompt = input_image_setup(image_loc)
     prompt_parts = [input_prompt, image_prompt[0], question_prompt]
     response = model.generate_content(prompt_parts)
@@ -148,7 +147,7 @@ while True:
         question_prompt = "What is this image? describe precisely"
 
         # Use a separate thread to generate Gemini response asynchronously
-        threading.Thread(target=generate_gemini_response_async, args=(input_prompt, image_loc, question_prompt)).start()
+        threading.Thread(target=generate_gemini_response_async, args=(input_prompt, image_loc, question_prompt, language)).start()
 
         print(f"Image {counter} saved as {filename}")
         
