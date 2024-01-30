@@ -1,5 +1,5 @@
 import cv2
-from google.generativeai import genai
+import google.generativeai as genai
 from pathlib import Path
 import threading
 import os
@@ -7,8 +7,7 @@ import atexit
 import pyttsx3
 import RPi.GPIO as GPIO
 from googletrans import Translator
-
-engine = pyttsx3.init()
+import os
 
 # Initialize webcam
 cap = cv2.VideoCapture(0)
@@ -17,6 +16,9 @@ cap.set(4, 640)
 
 genai.configure(api_key='AIzaSyB-IbJ3LvK2x10tWXxcDcQv_2CRoYBLPQI')
 
+def speak(text):
+    os.system(f"espeak '{text}'")
+    
 # Initialize counter
 counter = 0
 image_captured = False  # Flag to track whether an image has been captured
@@ -70,13 +72,11 @@ def generate_gemini_response_async(input_prompt, image_loc, question_prompt):
     response_temp = response
     if language == "en":
         print(response)
-        engine.say(response)
-        engine.runAndWait()
+        speak(response)
     else:
         out = translator.translate(response_temp, dest=language).text
         print(out)
-        engine.say(out)
-        engine.runAndWait()
+        speak(out)
 
 def generate_gemini_response(input_prompt, image_loc, question_prompt):
     image_prompt = input_image_setup(image_loc)
@@ -112,19 +112,26 @@ def delete_images_in_folder(folder_path):
         print(f"Error deleting images: {e}")
 
 # GPIO setup
-button_pin = 14  # Replace with the GPIO pin connected to your button
+button_pin = 27  # Replace with the GPIO pin connected to your button
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-button_pin2 = 18  # Replace with the GPIO pin connected to your button
-GPIO.setup(button_pin2, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-button_pin3 = 3  # Replace with the GPIO pin connected to your button
+button_pin3 = 17  # Replace with the GPIO pin connected to your button
 GPIO.setup(button_pin3, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # Language selection
 global language
-language = "en"  # Default language is English
+language = "en"
+
+
+# Default language is English
+
+input_prompt = """"
+               You are an expert in understanding scenarios and reading texts and identifying objects.
+               You will receive input images as scenarios &
+               you will have to describe scenarios and identify objects and read texts based on the input image
+               """
 
 # Replace 'your_folder_path' with the actual path of the folder containing images
 folder_path = 'Videos'
@@ -145,7 +152,7 @@ while True:
             print("Language selected: English")
 
     # Check for GPIO pin press to capture image
-    if GPIO.input(button_pin) == GPIO.LLOW and not image_captured:
+    if GPIO.input(button_pin) == GPIO.LOW and not image_captured:
         # Increment counter
         counter += 1
 
@@ -153,7 +160,7 @@ while True:
         filename = f'Videos/image_{counter}.png'
         cv2.imwrite(filename, frame)
         image_loc = f"Videos/image_{counter}.png"
-        question_prompt = "What is this image? Describe precisely"
+        question_prompt = "What is this image? Describe precisely and properly, also read out any text if present"
 
         # Use a separate thread to generate Gemini response asynchronously
         threading.Thread(target=generate_gemini_response_async, args=(input_prompt, image_loc, question_prompt)).start()
